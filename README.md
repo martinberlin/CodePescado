@@ -17,3 +17,7 @@ Just run:
     % ddev php bin/console doctrine:migrations:migrate
 
 to create the 2 tables for this example.
+
+## Inspiration and self-education for this code example
+
+https://medium.com/@laurentmn/symfony-compiler-passes-the-secret-weapon-youre-not-using-8c2699d6d6f2
