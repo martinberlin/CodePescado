@@ -27,6 +27,10 @@ class ApiClient
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
+    public function __construct()
+    {
+        $this->createdAt = new \DateTimeImmutable(); // Set it to now as default on creation
+    }
     public function getId(): ?int
     {
         return $this->id;

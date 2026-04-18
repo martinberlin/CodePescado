@@ -8,11 +8,18 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     documents_storage_path: '%kernel.project_dir%/var/documents'
+    test_client: '%env(string:TEST_CLIENT)%'
+    test_client_api_key: '%env(string:TEST_APIKEY)%'
+
 services:
     # default configuration for services in *this* file
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        # explicit bindings to inject automatically anywhere testclient defined in ENV vars
+        bind:
+            string $testClient: '%test_client%'
+            string $testClientApiKey: '%test_client_api_key%'
     # https://symfony.com/blog/new-in-symfony-5-3-service-autowiring-with-attributes
     # Was coming out in this version and I must say never had the need to use it so far :)
     _instanceof:
@@ -20,6 +27,7 @@ services:
             tags: ['app.notification_channel']
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
+
     App\:
         resource: '../src/'
         exclude:
