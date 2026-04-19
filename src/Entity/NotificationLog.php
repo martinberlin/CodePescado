@@ -19,6 +19,8 @@ class NotificationLog
     private ?string $channel = null;
 
     #[ORM\Column(length: 255)]
+    private ?string $recipient = null;
+    #[ORM\Column(length: 255)]
     private ?string $subject = null;
 
     #[ORM\Column(type: Types::TEXT)]
@@ -33,6 +35,12 @@ class NotificationLog
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
+    public function __construct()
+    {
+        // Let's set by default here createdAt to now
+        // In a real project DateTimeZone will be handled outside the entity and not hardcoded here:
+        $this->createdAt = new \DateTimeImmutable("now", new \DateTimeZone("Europe/Madrid"));
+    }
     public function getId(): ?int
     {
         return $this->id;
@@ -88,6 +96,10 @@ class NotificationLog
 
     public function setStatus(string $status): static
     {
+        // Validate that status is not crap
+        if (! in_array($status, ['sent', 'failed'])) {
+            throw new \InvalidArgumentException('status must be either sent or failed');
+        }
         $this->status = $status;
 
         return $this;
@@ -113,6 +125,18 @@ class NotificationLog
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getRecipient(): ?string
+    {
+        return $this->recipient;
+    }
+
+    public function setRecipient(string $value): static
+    {
+        $this->recipient = $value;
 
         return $this;
     }
