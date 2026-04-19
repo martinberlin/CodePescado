@@ -45,10 +45,22 @@ class ApiController extends AbstractController
                                      NotificationLogRepository $notificationLogRepository,
                                      NotificationChannelRegistry $channelRegistry): Response
     {
-        // Filters to be added in next commits, for now return all Notifications like if $request would have no GET params
-        // Pending to implement custom repository methjod mentioned in Step 2
-        $notifications = $notificationLogRepository->findAll();
-
+        // Check request GET params
+        if (count($request->query)) {
+            // Filter parameters set. Note: Since is an example we will use a fixed local TimeZone
+            $from = date_create_immutable($request->query->get('from'), new \DateTimeZone('Europe/Madrid'));
+            // If to is not set, then default it to now.
+            $to = $request->query->has('to') ?
+                date_create_immutable($request->query->get('to'), new \DateTimeZone('Europe/Madrid')) : new \DateTimeImmutable('now');
+            $notifications = $notificationLogRepository->findByChannelAndDateRange(
+                $request->query->get('channel'),
+                $from,
+                $to
+            );
+        } else {
+            // List all notifications
+            $notifications = $notificationLogRepository->findAll();
+        }
         // This uses Symfony serializer
         return $this->json(
             ['notifications' => $notifications]

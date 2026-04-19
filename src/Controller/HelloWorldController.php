@@ -1,9 +1,7 @@
 <?php
 namespace App\Controller;
 
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -11,7 +9,7 @@ use Symfony\Component\Routing\Attribute\Route;
 class HelloWorldController
 {
     #[Route('/hello', name: 'hello_world', methods: ['GET'])]
-    public function claimCreate(Request $request, EntityManagerInterface $em): Response
+    public function helloWorld(): Response
     {
         $response = new JsonResponse();
         $response->setContent(json_encode(['message' => 'hello fish']));
