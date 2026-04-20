@@ -13,22 +13,19 @@ Use doctrine:migrations:migrate to create your tables
 
 ## Installation
 
-git clone https://github.com/martinberlin/CodePescado.git
-cd CodePescado
-// NOTE: Used PHP 8.2 as specified with ddev change this php for your version in command line
-php composer install
-// Create a db in mysql called 'db' and update DATABASE_URL in the environment
-php bin/console doctrine:database:create
-php bin/console doctrine:migrations:migrate
-// Didn't created fixtures. Please use this command to seed the api-client and insert it on the DB:
-
-- Add a Doctrine fixture or a console command to seed a test ApiClient with a known API key. 
-
-      php bin/console app:seed-test-api-client
+    git clone https://github.com/martinberlin/CodePescado.git
+    cd CodePescado
+    // NOTE: Used PHP 8.2 as specified with ddev change this php for your version in command line
+    php composer install
+    // Create a db in mysql called 'db' and update DATABASE_URL in the environment
+    php bin/console doctrine:database:create
+    php bin/console doctrine:migrations:migrate
+    // Please use this command to seed the api-client and insert it on the DB:
+    php bin/console app:seed-test-api-client
 
 Needs the [symfony CLI installed](https://symfony.com/download)
 
-symfony server:start
+    symfony server:start
 
 ## Notification log 
 
