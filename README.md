@@ -9,10 +9,26 @@ Containers and web simple install using DDEV and OrbStack as container manager.
 Use doctrine:migrations:migrate to create your tables
 
 - PHP version used: 8.2 
-- Add a Doctrine fixture or a console command to seed a test ApiClient with a known
-  API key. 
+- Symfony version 7.4.8
+
+## Installation
+
+git clone https://github.com/martinberlin/CodePescado.git
+cd CodePescado
+// NOTE: Used PHP 8.2 as specified with ddev change this php for your version in command line
+php composer install
+// Create a db in mysql called 'db' and update DATABASE_URL in the environment
+php bin/console doctrine:database:create
+php bin/console doctrine:migrations:migrate
+// Didn't created fixtures. Please use this command to seed the api-client and insert it on the DB:
+
+- Add a Doctrine fixture or a console command to seed a test ApiClient with a known API key. 
 
       php bin/console app:seed-test-api-client
+
+Needs the [symfony CLI installed](https://symfony.com/download)
+
+symfony server:start
 
 ## Notification log 
 
@@ -24,22 +40,7 @@ Ex. of working queries:
 
 /api/notifications?from=2026-01-06 00:00:00&to=now&channel=email
 
-Also leaving **to** empty will take now as a default.
-
-## Tables created using Doctrine ORM
-
-    % ddev php bin/console doctrine:migrations:diff
-Generated new migration class to "/var/www/html/migrations/Version20260417161656.php"
-
-To run just this migration for testing purposes, you can use migrations:execute --up "DoctrineMigrations\\Version20260417161656"
-
-To revert the migration you can use migrations:execute --down "DoctrineMigrations\\Version20260417161656"
-
-Just run:
-
-    % ddev php bin/console doctrine:migrations:migrate
-
-to create the 2 tables for this example.
+/api/notifications?from=2026-01-06 00:00:XX&to=now&channel=email will drop a 422 error response
 
 ## Inspiration and self-education for this code example
 
