@@ -27,6 +27,10 @@ Needs the [symfony CLI installed](https://symfony.com/download)
 
     symfony server:start
 
+Run some tests:
+
+    php bin/phpunit --testdox
+
 ## Notification log 
 
 Important: 

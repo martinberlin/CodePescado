@@ -1,0 +1,4 @@
+doctrine:
+    dbal:
+        # Do not append _test in DATABASE_URL
+        dbname_suffix: ''

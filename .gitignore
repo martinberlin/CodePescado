@@ -59,7 +59,7 @@
 .env
 .env.local
 .env.dist
-.env.test.local
+.env.test
 .idea
 ###> symfony/asset-mapper ###
 /public/assets/
