@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller;
 
 use App\Channel\NotificationChannelRegistry;
@@ -44,25 +45,45 @@ class ApiController extends AbstractController
      * @return Response
      */
     #[Route('/notifications ', name: 'api_notifications', methods: ['GET'])]
-    public function apiNotifications(Request $request,
-                                     NotificationLogRepository $notificationLogRepository,
+    public function apiNotifications(Request                     $request,
+                                     NotificationLogRepository   $notificationLogRepository,
                                      NotificationChannelRegistry $channelRegistry): Response
     {
         // Check request GET params
         if (count($request->query)) {
+            // Validate
+            $errors = [];
+            $validate = ['channel', 'from', 'to'];
+            foreach ($validate as $v) {
+                if ($request->query->has($v) === false) {
+                    $errors[$v] = 'Missing parameter: ' . $v;
+                    continue;
+                }
+            }
             // Filter parameters set. Note: Since is an example we will use a fixed local TimeZone
             $from = date_create_immutable($request->query->get('from'), new \DateTimeZone('Europe/Madrid'));
-            // If to is not set, then default it to now.
-            $to = $request->query->has('to') ?
-                date_create_immutable($request->query->get('to'), new \DateTimeZone('Europe/Madrid')) : new \DateTimeImmutable('now');
-            // Some user feedback in case date string does not convert
+            $to   = date_create_immutable($request->query->get('to'), new \DateTimeZone('Europe/Madrid'));
+            // Validate also date conversion
             if ($from === false) {
-                throw new \InvalidArgumentException('from: parameter could not be converted to DateTimeImmutable');
+                $errors['from'] = 'parameter could not be converted to DateTimeImmutable';
             }
             if ($to === false) {
-                throw new \InvalidArgumentException('to: parameter could not be converted to DateTimeImmutable');
+                $errors['to'] = 'parameter could not be converted to DateTimeImmutable';
             }
-            // Note channel is validated already in the filter
+            if (!isset($errors['channel']) &&
+                !$channelRegistry->has($request->query->get('channel'))) {
+                $errors['channel'] = sprintf(
+                    'Unknown channel: %s Available channels: [%s]',
+                    $request->query->get('channel'),
+                    implode(', ', $channelRegistry->getNames())
+                );
+            }
+            if ($errors !== []) {
+                return new JsonResponse([
+                    'message' => 'Validation failed',
+                    'errors' => $errors,
+                ], 422);
+            }
             $notifications = $notificationLogRepository->findByChannelAndDateRange(
                 $request->query->get('channel'),
                 $from,
@@ -75,35 +96,50 @@ class ApiController extends AbstractController
         // This uses Symfony serializer
         return $this->json(
             ['notifications' => $notifications]
-            );
+        );
     }
 
     #[Route('/notifications/send', name: 'api_notifications_send', methods: ['POST'])]
-    public function apiNotificationsSend(Request $request,
-                                     NotificationLogRepository $notificationLogRepository,
-                                     NotificationChannelRegistry $channelRegistry): Response
+    public function apiNotificationsSend(Request                     $request,
+                                         NotificationLogRepository   $notificationLogRepository,
+                                         NotificationChannelRegistry $channelRegistry): Response
     {
         // decode JSON and validate the request payload, check that channel exists and rest are non-empty
         try {
             $parsed = json_decode($request->getContent(), $associative = true, $depth = 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
-            throw new NotFoundHttpException('Invalid JSON payload: ' . $e->getMessage());
+            // Return Exception as the requested 422 status
+            return new JsonResponse([
+                'message' => 'Validation failed',
+                'errors' => [
+                    'payload' => 'Invalid JSON payload: ' . $e->getMessage(),
+                ],
+            ], 422);
         }
-        $validate = ['recipient', 'subject', 'body'];
+        // Validate payload and return field-keyed error map on validation failures
+        $errors = [];
+        $validate = ['channel', 'recipient', 'subject', 'body'];
         foreach ($validate as $v) {
             if (!array_key_exists($v, $parsed)) {
-                throw new \InvalidArgumentException(sprintf("%s should be a property in the json", $v));
+                $errors[$v] = 'Missing parameter: ' . $v;
+                continue;
             }
-            if ($parsed[$v] === '') {
-                throw new \InvalidArgumentException(sprintf("%s should be not empty", $v));
+            if (trim($parsed[$v]) === '' || !is_string($parsed[$v])) {
+                $errors[$v] = 'Should be a non empty string';
             }
         }
-        if (!$channelRegistry->has($parsed['channel'])) {
-            throw new \InvalidArgumentException(sprintf(
-                'Unknown channel "%s". Available channels: [%s]',
+        if (!$channelRegistry->has($parsed['channel']) && !isset($errors[$parsed['channel']])) {
+            $errors['channel'] = sprintf(
+                'Unknown channel: %s Available channels: [%s]',
                 $parsed['channel'],
                 implode(', ', $channelRegistry->getNames())
-            ));
+            );
+        }
+        if ($errors !== []) {
+            return new JsonResponse([
+                'message' => 'Validation failed',
+                'errors' => $errors,
+            ], 422);
         }
         // Look up the channel and send
         $channel = $channelRegistry->get($parsed['channel']);
