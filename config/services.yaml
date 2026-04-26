@@ -32,3 +32,5 @@ services:
         exclude:
             - '../src/CompilerPass/'
             - '../src/Entity/'
+    # Alias that is used in ApiAccessTokenAuthenticator
+    Symfony\Component\Security\Http\AccessToken\HeaderAccessTokenExtractor: '@security.access_token_extractor.header'
