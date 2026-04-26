@@ -20,7 +20,7 @@ security:
             pattern: ^/api
             stateless: true
             provider: api_token_user_provider
-            # Replaced ApiAccessTokenHandler for this to catch 401* errors (unauthorized)
+            # Added this to catch also 401 (unauthorized)
             custom_authenticators:
                 - App\Security\ApiAccessTokenAuthenticator
 
