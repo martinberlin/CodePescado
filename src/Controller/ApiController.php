@@ -38,6 +38,34 @@ class ApiController extends AbstractController
     }
 
     /**
+     * Brief: Helper method to avoid validating all the time if DATE instanceof DateTimeImmutable
+     * @param Request $request
+     * @param string $param
+     * @param \DateTimeZone $tz
+     * @param array $errors
+     * @return \DateTimeImmutable|null
+     */
+    private function parseOptionalDateTimeImmutable(
+        Request $request,
+        string $param,
+        \DateTimeZone $tz,
+        array &$errors,
+    ): ?\DateTimeImmutable {
+        $raw = trim($request->query->getString($param, ''));
+        if ($raw === '') {
+            return null;
+        }
+
+        $dt = date_create_immutable($raw, $tz);
+        if ($dt === false) {
+            $errors[$param] = sprintf('%s could not be converted to DateTimeImmutable', $param);
+            return null;
+        }
+
+        return $dt;
+    }
+
+    /**
      * NOTE: This route should be protected with a Bearer token defined in .env for the test and implemented in security.yaml
      * Added pagination: Check NotificationLogRepository
      * @param Request $request
@@ -68,25 +96,13 @@ class ApiController extends AbstractController
         }
 
         $tz = new \DateTimeZone('Europe/Madrid');
-        $fromRaw = $request->query->getString('from', '');
-        $from = null;
-        if ($fromRaw !== '') {
-            $from = date_create_immutable($fromRaw, $tz);
-            if ($from === false) {
-                $errors['from'] = 'from could not be converted to DateTimeImmutable';
-            }
-        }
+        $from = $this->parseOptionalDateTimeImmutable($request, 'from', $tz, $errors);
+        $to   = $this->parseOptionalDateTimeImmutable($request, 'to', $tz, $errors);
 
-        $toRaw = $request->query->getString('to', '');
-        $to = null;
-        if ($toRaw !== '') {
-            $to = date_create_immutable($toRaw, $tz);
-            if ($to === false) {
-                $errors['to'] = 'to could not be converted to DateTimeImmutable';
-            }
+        if ($from !== null && $to !== null && $from > $to) {
+            $errors['from'] = 'from must be <= to';
         }
-
-        if ($from instanceof \DateTimeImmutable && $to instanceof \DateTimeImmutable && $from > $to) {
+        if ($from !== null && $to !== null && $from > $to) {
             $errors['from'] = 'from must be <= to';
         }
 
@@ -99,10 +115,10 @@ class ApiController extends AbstractController
 
         $result = $notificationLogRepository->searchPaginated(
             channel: $channel !== '' ? $channel : null,
-            from: $from instanceof \DateTimeImmutable ? $from : null,
-            to: $to instanceof \DateTimeImmutable ? $to : null,
+            from: $from,
+            to: $to,
             page: $page,
-            limit: $limit,
+            limit: $limit
         );
 
         return $this->json([
@@ -111,12 +127,12 @@ class ApiController extends AbstractController
                 'page' => $result->page,
                 'limit' => $result->limit,
                 'total' => $result->total,
-                'pages' => (int) ceil($result->total / max(1, $result->limit)),
+                'pages' => (int) ceil($result->total / max(1, $result->limit))
             ],
             'filters' => [
                 'channel' => $channel !== '' ? $channel : null,
-                'from' => $from instanceof \DateTimeImmutable ? $from->format(\DateTimeInterface::ATOM) : null,
-                'to' => $to instanceof \DateTimeImmutable ? $to->format(\DateTimeInterface::ATOM) : null,
+                'from' => $from?->format(\DateTimeInterface::ATOM),
+                'to' => $to?->format(\DateTimeInterface::ATOM)
             ],
         ]);
     }
