@@ -19,23 +19,29 @@ final class ApiAccessTokenAuthenticator extends AbstractAuthenticator
 
     public function supports(Request $request): ?bool
     {
-        // Only attempt auth for /api
-        if (!str_starts_with($request->getPathInfo(), '/api')) {
+        $path = $request->getPathInfo();
+
+        if (!str_starts_with($path, '/api')) {
             return false;
         }
-        // Only if there's an Authorization header
-        return $request->headers->has('Authorization');
+        // public
+        if ($path === '/api/channels') {
+            return false;
+        }
+        // Everything else under /api must be authenticated
+        return true;
     }
 
     public function authenticate(Request $request): Passport
     {
         $accessToken = $this->extractor->extractAccessToken($request);
-        if ($accessToken === '') {
-            throw new BadCredentialsException('Empty Bearer token.');
+
+        if ($accessToken === null || trim($accessToken) === '') {
+            throw new BadCredentialsException('Missing Bearer token.');
         }
+
         $userBadge = $this->tokenHandler->getUserBadgeFrom($accessToken);
 
-        // The token handler already did validation
         return new SelfValidatingPassport($userBadge);
     }
 
