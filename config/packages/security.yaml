@@ -20,9 +20,11 @@ security:
             pattern: ^/api
             stateless: true
             provider: api_token_user_provider
-            access_token:
-                token_handler: App\Security\ApiAccessTokenHandler
+            # Added this to catch also 401 (unauthorized)
+            custom_authenticators:
+                - App\Security\ApiAccessTokenAuthenticator
 
+            access_denied_handler: App\Security\ApiAccessDeniedHandler
             # Activate different ways to authenticate:
             # https://symfony.com/doc/current/security.html#the-firewall
 

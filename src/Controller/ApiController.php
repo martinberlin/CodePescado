@@ -38,65 +38,103 @@ class ApiController extends AbstractController
     }
 
     /**
+     * Brief: Helper method to avoid validating all the time if DATE instanceof DateTimeImmutable
+     * @param Request $request
+     * @param string $param
+     * @param \DateTimeZone $tz
+     * @param array $errors
+     * @return \DateTimeImmutable|null
+     */
+    private function parseOptionalDateTimeImmutable(
+        Request $request,
+        string $param,
+        \DateTimeZone $tz,
+        array &$errors,
+    ): ?\DateTimeImmutable {
+        $raw = trim($request->query->getString($param, ''));
+        if ($raw === '') {
+            return null;
+        }
+
+        $dt = date_create_immutable($raw, $tz);
+        if ($dt === false) {
+            $errors[$param] = sprintf('%s could not be converted to DateTimeImmutable', $param);
+            return null;
+        }
+
+        return $dt;
+    }
+
+    /**
      * NOTE: This route should be protected with a Bearer token defined in .env for the test and implemented in security.yaml
-     * Without proper bearer token you should get 401 status: Full authentication is required to access this resource.
+     * Added pagination: Check NotificationLogRepository
      * @param Request $request
      * @param NotificationChannelRegistry $channelRegistry
      * @return Response
      */
-    #[Route('/notifications ', name: 'api_notifications', methods: ['GET'])]
-    public function apiNotifications(Request                     $request,
-                                     NotificationLogRepository   $notificationLogRepository,
-                                     NotificationChannelRegistry $channelRegistry): Response
-    {
-        // Check request GET params
-        if (count($request->query)) {
-            // Validate
-            $errors = [];
-            $validate = ['channel', 'from', 'to'];
-            foreach ($validate as $v) {
-                if ($request->query->has($v) === false) {
-                    $errors[$v] = 'Missing parameter: ' . $v;
-                    continue;
-                }
-            }
-            // Filter parameters set. Note: Since is an example we will use a fixed local TimeZone
-            $from = date_create_immutable($request->query->get('from'), new \DateTimeZone('Europe/Madrid'));
-            $to   = date_create_immutable($request->query->get('to'), new \DateTimeZone('Europe/Madrid'));
-            // Validate also date conversion
-            if ($from === false) {
-                $errors['from'] = 'parameter could not be converted to DateTimeImmutable';
-            }
-            if ($to === false) {
-                $errors['to'] = 'parameter could not be converted to DateTimeImmutable';
-            }
-            if (!isset($errors['channel']) &&
-                !$channelRegistry->has($request->query->get('channel'))) {
-                $errors['channel'] = sprintf(
-                    'Unknown channel: %s Available channels: [%s]',
-                    $request->query->get('channel'),
-                    implode(', ', $channelRegistry->getNames())
-                );
-            }
-            if ($errors !== []) {
-                return new JsonResponse([
-                    'message' => 'Validation failed',
-                    'errors' => $errors,
-                ], 422);
-            }
-            $notifications = $notificationLogRepository->findByChannelAndDateRange(
-                $request->query->get('channel'),
-                $from,
-                $to
-            );
-        } else {
-            // List all notifications
-            $notifications = $notificationLogRepository->findAll();
+    #[Route('/notifications', name: 'api_notifications', methods: ['GET'])]
+    public function apiNotifications(
+        Request $request,
+        NotificationLogRepository $notificationLogRepository,
+        NotificationChannelRegistry $channelRegistry,
+    ): JsonResponse {
+        $errors = [];
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = (int) $request->query->get('limit', 20);
+        if ($limit < 1) {
+            $errors['limit'] = 'limit must be >= 1';
         }
-        // This uses Symfony serializer
-        return $this->json(
-            ['notifications' => $notifications]
+        $limit = min(max($limit, 1), 100);
+
+        $channel = $request->query->getString('channel', '');
+        if ($channel !== '' && !$channelRegistry->has($channel)) {
+            $errors['channel'] = sprintf(
+                'Unknown channel: %s Available channels: [%s]',
+                $channel,
+                implode(', ', $channelRegistry->getNames())
+            );
+        }
+
+        $tz = new \DateTimeZone('Europe/Madrid');
+        $from = $this->parseOptionalDateTimeImmutable($request, 'from', $tz, $errors);
+        $to   = $this->parseOptionalDateTimeImmutable($request, 'to', $tz, $errors);
+
+        if ($from !== null && $to !== null && $from > $to) {
+            $errors['from'] = 'from must be <= to';
+        }
+        if ($from !== null && $to !== null && $from > $to) {
+            $errors['from'] = 'from must be <= to';
+        }
+
+        if ($errors !== []) {
+            return $this->json([
+                'message' => 'Validation failed',
+                'errors' => $errors,
+            ], 422);
+        }
+
+        $result = $notificationLogRepository->searchPaginated(
+            channel: $channel !== '' ? $channel : null,
+            from: $from,
+            to: $to,
+            page: $page,
+            limit: $limit
         );
+
+        return $this->json([
+            'notifications' => $result->items,
+            'meta' => [
+                'page' => $result->page,
+                'limit' => $result->limit,
+                'total' => $result->total,
+                'pages' => (int) ceil($result->total / max(1, $result->limit))
+            ],
+            'filters' => [
+                'channel' => $channel !== '' ? $channel : null,
+                'from' => $from?->format(\DateTimeInterface::ATOM),
+                'to' => $to?->format(\DateTimeInterface::ATOM)
+            ],
+        ]);
     }
 
     #[Route('/notifications/send', name: 'api_notifications_send', methods: ['POST'])]

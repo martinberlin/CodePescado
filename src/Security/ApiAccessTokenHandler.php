@@ -35,7 +35,6 @@ final class ApiAccessTokenHandler implements AccessTokenHandlerInterface
         if ($name === '') {
             throw new BadCredentialsException('API client has no name.');
         }
-        //return new UserBadge($name);
         // This closure returns the UserInterface directly.
         return new UserBadge($name, fn() => new ApiClientUser($name));
     }
