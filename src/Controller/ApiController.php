@@ -46,11 +46,12 @@ class ApiController extends AbstractController
      * @return \DateTimeImmutable|null
      */
     private function parseOptionalDateTimeImmutable(
-        Request $request,
-        string $param,
+        Request       $request,
+        string        $param,
         \DateTimeZone $tz,
-        array &$errors,
-    ): ?\DateTimeImmutable {
+        array         &$errors,
+    ): ?\DateTimeImmutable
+    {
         $raw = trim($request->query->getString($param, ''));
         if ($raw === '') {
             return null;
@@ -74,13 +75,14 @@ class ApiController extends AbstractController
      */
     #[Route('/notifications', name: 'api_notifications', methods: ['GET'])]
     public function apiNotifications(
-        Request $request,
-        NotificationLogRepository $notificationLogRepository,
+        Request                     $request,
+        NotificationLogRepository   $notificationLogRepository,
         NotificationChannelRegistry $channelRegistry,
-    ): JsonResponse {
+    ): JsonResponse
+    {
         $errors = [];
-        $page = max(1, (int) $request->query->get('page', 1));
-        $limit = (int) $request->query->get('limit', 20);
+        $page = max(1, (int)$request->query->get('page', 1));
+        $limit = (int)$request->query->get('limit', 20);
         if ($limit < 1) {
             $errors['limit'] = 'limit must be >= 1';
         }
@@ -97,7 +99,7 @@ class ApiController extends AbstractController
 
         $tz = new \DateTimeZone('Europe/Madrid');
         $from = $this->parseOptionalDateTimeImmutable($request, 'from', $tz, $errors);
-        $to   = $this->parseOptionalDateTimeImmutable($request, 'to', $tz, $errors);
+        $to = $this->parseOptionalDateTimeImmutable($request, 'to', $tz, $errors);
 
         if ($from !== null && $to !== null && $from > $to) {
             $errors['from'] = 'from must be <= to';
@@ -127,7 +129,7 @@ class ApiController extends AbstractController
                 'page' => $result->page,
                 'limit' => $result->limit,
                 'total' => $result->total,
-                'pages' => (int) ceil($result->total / max(1, $result->limit))
+                'pages' => (int)ceil($result->total / max(1, $result->limit))
             ],
             'filters' => [
                 'channel' => $channel !== '' ? $channel : null,
