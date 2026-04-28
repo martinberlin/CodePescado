@@ -5,14 +5,11 @@ namespace App\Controller;
 use App\Channel\NotificationChannelRegistry;
 use App\Entity\NotificationLog;
 use App\Repository\NotificationLogRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
-use function PHPUnit\Framework\throwException;
 
 /**
  * This could be also done quasi automatically using API platform but I guess that is not the plan for this example
@@ -28,7 +25,6 @@ class ApiController extends AbstractController
     #[Route('/channels ', name: 'api_channels', methods: ['GET'])]
     public function apiChannels(Request $request, NotificationChannelRegistry $channelRegistry): Response
     {
-        $response = new JsonResponse();
         $channels = $channelRegistry->getNames();
 
         return new JsonResponse([
